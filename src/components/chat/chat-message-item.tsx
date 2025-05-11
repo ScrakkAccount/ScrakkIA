@@ -21,6 +21,11 @@ const MapDisplay = dynamic(() => import('@/components/maps/MapDisplay'), {
   ssr: false,
 });
 
+// Importar el nuevo componente específico para mapas en chat
+const ChatMapViewer = dynamic(() => import('@/components/maps/ChatMapViewer'), {
+  ssr: false,
+});
+
 interface ChatMessageItemProps {
   message: ChatMessage;
 }
@@ -50,7 +55,9 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
 
   useEffect(() => {
     if (message.text && !isUser) {
-      setContainsMapUrl(detectMapUrlInText(message.text));
+      // Si contiene [URL del mapa], siempre activar la visualización del mapa
+      const hasMapPlaceholder = message.text.includes("[URL del mapa]");
+      setContainsMapUrl(hasMapPlaceholder || detectMapUrlInText(message.text));
     }
   }, [message.text, isUser]);
 
@@ -203,7 +210,11 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
               message.text ? (
                 <div className="min-w-0">
                   {renderMessageContent(message.text)}
-                  {!isUser && containsMapUrl && <MapDisplay text={message.text} />}
+                  {!isUser && message.text.includes("[URL del mapa]") ? (
+                    <ChatMapViewer text={message.text} />
+                  ) : !isUser && containsMapUrl ? (
+                    <MapDisplay text={message.text} />
+                  ) : null}
                 </div>
               ) : null
             )}

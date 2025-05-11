@@ -1,4 +1,3 @@
-
 "use client";
 
 import type React from 'react';
@@ -6,7 +5,7 @@ import { useState, useRef, useEffect, type KeyboardEvent, type ChangeEvent, useC
 import { useChat } from '@/contexts/chat-context';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Paperclip, SendHorizonal, CornerDownLeft, X, FileText, Mic, Square, Loader2, CircleStop, Settings2, MessageSquare, Volume2 } from 'lucide-react';
+import { Paperclip, SendHorizonal, CornerDownLeft, X, FileText, Mic, Square, Loader2, CircleStop, Settings2, MessageSquare, Volume2, MapPin } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -17,7 +16,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
+import dynamic from 'next/dynamic';
+
+// Importar el botón de ubicación con carga dinámica para evitar errores de SSR
+const LocationButton = dynamic(() => import('@/components/maps/LocationButton'), {
+  ssr: false
+});
 
 interface AttachmentPreview {
   file: File;
@@ -41,6 +47,8 @@ export function ChatInput() {
   // const [isRecording, setIsRecording] = useState(false); // Managed by currentMicAction now
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [micPermissionStatus, setMicPermissionStatus] = useState<MicPermissionStatus>('idle');
+  const [showLocationButton, setShowLocationButton] = useState(false);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   
   const { 
     sendMessage, 
@@ -378,162 +386,186 @@ export function ChatInput() {
                         (micPermissionStatus === 'pending' && currentMicAction === 'idle') || 
                         isTranscribing;
 
+  const handleLocationObtained = (location: {lat: number, lng: number}) => {
+    setUserLocation(location);
+    // Opcional: insertar la ubicación en el mensaje
+    // setMessage(msg => msg + ` [Mi ubicación: ${location.lat.toFixed(6)},${location.lng.toFixed(6)}]`);
+    
+    // Almacenar la ubicación en localStorage para usarla después
+    try {
+      localStorage.setItem('userExactLocation', JSON.stringify(location));
+    } catch (e) {
+      console.error('Error guardando ubicación:', e);
+    }
+    
+    toast({
+      title: "Ubicación obtenida",
+      description: "Tu ubicación exacta se utilizará para las rutas en el mapa.",
+    });
+  };
+
   return (
-    <TooltipProvider delayDuration={300}>
-      <form
-        onSubmit={handleSubmit}
-        className="sticky bottom-0 z-10 border-t border-border bg-background/90 p-3 shadow-sm backdrop-blur-sm md:p-4"
-      >
+    <div className="relative mt-auto pt-4 pb-6 md:pb-4 px-4 md:px-8 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <form onSubmit={handleSubmit} className="flex flex-col space-y-3 relative mx-auto max-w-5xl">
         {attachmentPreview && (
-          <div className="mb-2 flex items-center gap-2 rounded-md border border-input bg-card p-2 shadow-sm">
-            {attachmentPreview.type === 'image' && attachmentPreview.previewDataUrl ? (
-              <Image
-                src={attachmentPreview.previewDataUrl}
-                alt={attachmentPreview.name}
-                width={48}
-                height={48}
-                className="h-12 w-12 rounded-md object-cover"
-              />
+          <div className="flex items-center gap-2 rounded-md border bg-background/50 p-2 shadow-sm">
+            {attachmentPreview.type === 'image' ? (
+              <div className="relative h-12 w-12 overflow-hidden rounded">
+                <Image 
+                  src={attachmentPreview.previewDataUrl || ''} 
+                  alt={attachmentPreview.name}
+                  fill 
+                  style={{ objectFit: 'cover' }} 
+                  className="rounded" 
+                  data-ai-hint="image preview thumbnail"
+                />
+              </div>
             ) : (
-              <FileText className="h-10 w-10 text-muted-foreground" />
+              <FileText className="h-8 w-8 text-muted-foreground" />
             )}
-            <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium text-foreground">{attachmentPreview.name}</p>
-              <p className="text-xs text-muted-foreground">{attachmentPreview.fileType} - {(attachmentPreview.file.size / 1024).toFixed(2)} KB</p>
+            
+            <div className="flex-1 overflow-hidden pr-2">
+              <p className="truncate text-sm font-medium">{attachmentPreview.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {attachmentPreview.fileType} - {(attachmentPreview.file.size / 1024).toFixed(2)} KB
+              </p>
             </div>
-            <Button type="button" variant="ghost" size="icon" onClick={removeAttachment} className="h-7 w-7 text-muted-foreground hover:text-destructive">
+            
+            <Button type="button" variant="ghost" size="icon" onClick={removeAttachment}>
               <X className="h-4 w-4" />
             </Button>
           </div>
         )}
-        <div className="relative flex items-end gap-2 rounded-lg border border-input focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 focus-within:ring-offset-background transition-shadow duration-200 ease-in-out shadow-sm hover:shadow-md">
-          <Textarea
-            ref={textareaRef}
-            value={message}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Send a message to Scrakk AI..."
-            className="flex-1 resize-none border-0 bg-transparent p-3 pr-[105px] shadow-none focus-visible:ring-0 text-sm min-h-[52px] max-h-[200px]" 
-            rows={1}
-            disabled={isLoadingAiResponse || micPermissionStatus === 'pending' || currentMicAction !== 'idle' || isTranscribing}
-            aria-label="Chat message input"
-          />
-          <div className="absolute bottom-2 right-2 flex items-center gap-1">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="*/*" // Allows selection from file system
-              onChange={handleFileSelect}
-              className="hidden"
-              aria-label="Attach file input"
+        
+        {showLocationButton && (
+          <div className="mb-2">
+            <LocationButton onLocationObtained={handleLocationObtained} />
+          </div>
+        )}
+        
+        <div className="flex items-end gap-2">
+          <div className="relative flex-1">
+            <Textarea 
+              ref={textareaRef}
+              value={message}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              disabled={isLoadingAiResponse || isTranscribing || currentMicAction !== 'idle'}
+              placeholder={
+                isLoadingAiResponse ? "Esperando respuesta..." :
+                isTranscribing ? "Transcribiendo audio..." :
+                currentMicAction !== 'idle' ? "Grabando audio..." :
+                `Escribe un mensaje...${selectedLanguage ? ` (${selectedLanguage})` : ''}`
+              }
+              className="min-h-[60px] w-full resize-none rounded-lg border bg-background pr-14 py-3 focus-visible:ring-accent"
             />
+            <div className="absolute bottom-2 right-2 flex gap-2 justify-between items-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-6 w-6 rounded-md">
+                    <Settings2 className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowLocationButton(!showLocationButton)}>
+                    <MapPin className="mr-2 h-4 w-4" />
+                    {showLocationButton ? "Ocultar botón de ubicación" : "Mostrar botón de ubicación"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {/* Otros items del menú */}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+          
+          {/* Botones de acción */}
+          <div className="flex gap-1.5 items-center">
+            {/* Botón de ubicación rápida */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 text-muted-foreground hover:text-accent focus-visible:ring-accent"
+                <Button 
+                  type="button" 
+                  size="icon" 
+                  variant="ghost" 
+                  className={cn(
+                    "h-9 w-9 rounded-full",
+                    userLocation ? "text-primary border-primary" : "text-muted-foreground"
+                  )}
+                  onClick={() => setShowLocationButton(!showLocationButton)}
+                >
+                  <MapPin className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {userLocation ? "Ubicación exacta activada" : "Obtener ubicación exacta"}
+              </TooltipContent>
+            </Tooltip>
+            
+            {/* Botón de adjuntar archivo */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  type="button" 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-9 w-9 rounded-full" 
+                  disabled={isLoadingAiResponse || isTranscribing || !!attachmentPreview || currentMicAction !== 'idle'}
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoadingAiResponse || currentMicAction !== 'idle' || isTranscribing || micPermissionStatus === 'pending'}
-                  aria-label="Attach file"
                 >
                   <Paperclip className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top" className="bg-popover text-popover-foreground border-border">Attach File</TooltipContent>
+              <TooltipContent side="top">Adjuntar archivo</TooltipContent>
             </Tooltip>
             
-            {currentMicAction !== 'idle' ? (
-                 <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 text-destructive hover:text-destructive/80 focus-visible:ring-accent"
-                            onClick={manualStopRecording}
-                            disabled={isTranscribing}
-                            aria-label="Stop recording"
-                        >
-                            {getMicButtonIcon()}
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="bg-popover text-popover-foreground border-border">
-                        {getMicButtonTooltip()}
-                    </TooltipContent>
-                </Tooltip>
-            ) : (
-                <DropdownMenu>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className={cn(
-                                        "h-9 w-9 text-muted-foreground hover:text-accent focus-visible:ring-accent",
-                                        (isTranscribing || micPermissionStatus === 'pending') && "text-primary"
-                                    )}
-                                    disabled={isMicDisabled}
-                                    aria-label={getMicButtonTooltip()}
-                                >
-                                    {getMicButtonIcon()}
-                                </Button>
-                            </DropdownMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="bg-popover text-popover-foreground border-border">
-                            {getMicButtonTooltip()}
-                        </TooltipContent>
-                    </Tooltip>
-                    <DropdownMenuContent align="end" className="bg-popover border-border shadow-xl w-56">
-                        <DropdownMenuItem 
-                            className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
-                            onSelect={() => startRecording('voice-to-chat')}
-                            disabled={isMicDisabled}
-                        >
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            Voice to Chat
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                            className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
-                            onSelect={() => startRecording('speak-with-ai')}
-                            disabled={isMicDisabled}
-                        >
-                           <Volume2 className="mr-2 h-4 w-4" />
-                            Speak with AI
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            )}
-
-
+            {/* Botón de micrófono */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  type="submit"
-                  variant="default"
-                  size="icon"
-                  className="h-9 w-9 bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-accent"
-                  disabled={(!message.trim() && !attachmentPreview) || isLoadingAiResponse || currentMicAction !== 'idle' || isTranscribing || micPermissionStatus === 'pending'}
-                  aria-label="Send message"
+                <Button 
+                  type="button" 
+                  size="icon" 
+                  variant={micPermissionStatus === 'denied' ? 'destructive' : currentMicAction !== 'idle' ? 'default' : 'ghost'} 
+                  className={cn(
+                    "h-9 w-9 rounded-full",
+                    currentMicAction !== 'idle' && "animate-pulse"
+                  )} 
+                  disabled={isLoadingAiResponse || isTranscribing || micPermissionStatus === 'unsupported'}
+                  onClick={currentMicAction === 'idle' ? 
+                    () => startRecording('voice-to-chat') : 
+                    manualStopRecording
+                  }
                 >
-                  {isLoadingAiResponse ? (
-                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status" />
-                  ) : (
-                    <SendHorizonal className="h-5 w-5" />
-                  )}
+                  {getMicButtonIcon()}
                 </Button>
               </TooltipTrigger>
-               <TooltipContent side="top" className="bg-popover text-popover-foreground border-border">
-                Send ( <CornerDownLeft className="inline h-3 w-3" /> )
-              </TooltipContent>
+              <TooltipContent side="top">{getMicButtonTooltip()}</TooltipContent>
             </Tooltip>
+            
+            {/* Botón de enviar */}
+            <Button 
+              type="submit" 
+              size="icon" 
+              disabled={(!message.trim() && !attachmentPreview) || isLoadingAiResponse || isTranscribing || currentMicAction !== 'idle'} 
+              className="h-9 w-9 rounded-full"
+            >
+              {isLoadingAiResponse ? 
+                <Loader2 className="h-5 w-5 animate-spin" /> : 
+                <SendHorizonal className="h-5 w-5" />
+              }
+            </Button>
           </div>
+          
+          {/* Input oculto para selección de archivos */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            onChange={handleFileSelect} 
+            accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/zip"
+          />
         </div>
       </form>
-    </TooltipProvider>
+    </div>
   );
 }
 

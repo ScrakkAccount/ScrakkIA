@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview A Genkit tool for fetching directions between two locations.
  *
@@ -22,6 +21,7 @@ export const GetDirectionsOutputSchema = z.object({
   message: z.string().describe("A human-readable message about the result, e.g., directions found, address not found, or error details."),
   mapEmbedUrl: z.string().optional().describe("An optional URL to a map showing the route. This will be a Google Maps directions URL."),
   routeSummary: z.string().optional().describe("A brief summary of the route, e.g., 'Route from [origin] to [destination].'"),
+  response: z.string().describe("The formatted response to return to the user.")
 });
 export type GetDirectionsOutput = z.infer<typeof GetDirectionsOutputSchema>;
 
@@ -40,6 +40,7 @@ export const getDirectionsTool = ai.defineTool(
       return {
         status: "MISSING_INFO",
         message: "Could not provide directions. Missing origin, destination, or country information.",
+        response: "Lo siento, no puedo proporcionar indicaciones sin la información completa de origen, destino o país."
       };
     }
     
@@ -48,12 +49,18 @@ export const getDirectionsTool = ai.defineTool(
     
     // Construct a Google Maps directions URL
     const mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodedOrigin}&destination=${encodedDestination}&travelmode=driving`;
+    
+    const routeSummary = `Ruta desde ${input.originAddress} hasta ${input.destinationAddress}, ${input.destinationCountry}.`;
+    
+    // Construir una respuesta formateada en español que incluya la URL real
+    const formattedResponse = `Aquí tienes las indicaciones para llegar desde ${input.originAddress} hasta ${input.destinationAddress}, ${input.destinationCountry}. Puedes ver la ruta completa en el siguiente mapa. URL del mapa: ${mapUrl}`;
 
     return {
       status: "SUCCESS",
       message: `I've found directions from '${input.originAddress}' to '${input.destinationAddress}, ${input.destinationCountry}'.`,
       mapEmbedUrl: mapUrl,
-      routeSummary: `Route from ${input.originAddress} to ${input.destinationAddress}, ${input.destinationCountry}.`,
+      routeSummary: routeSummary,
+      response: formattedResponse
     };
   }
 );

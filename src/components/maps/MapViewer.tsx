@@ -15,6 +15,9 @@ interface MapViewerProps {
 
 const MapViewer: React.FC<MapViewerProps> = ({ location, className }) => {
   useEffect(() => {
+    // Asegurarnos que estamos en el cliente
+    if (typeof window === 'undefined' || !window.L) return;
+    
     // Solución para los iconos de marcadores en Leaflet
     delete (L.Icon.Default.prototype as any)._getIconUrl;
     L.Icon.Default.mergeOptions({
@@ -23,6 +26,9 @@ const MapViewer: React.FC<MapViewerProps> = ({ location, className }) => {
       shadowUrl: '/leaflet/marker-shadow.png',
     });
   }, []);
+
+  // El componente solo se renderiza en el cliente
+  if (typeof window === 'undefined') return null;
 
   return (
     <div className={cn("w-full rounded-md overflow-hidden", className)}>

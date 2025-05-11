@@ -97,7 +97,9 @@ export function detectMapUrlInText(text: string): boolean {
     /google\.com\/maps/i,
     /openstreetmap\.org/i,
     /maps\.apple\.com/i,
-    /waze\.com/i
+    /waze\.com/i,
+    /https:\/\/[^\s]+/i, // Detectar cualquier URL en el texto
+    /URL del mapa:/i     // Detectar la frase "URL del mapa:" que ahora incluimos
   ];
   
   return mapUrlPatterns.some(pattern => pattern.test(text));
