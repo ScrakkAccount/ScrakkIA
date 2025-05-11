@@ -1,0 +1,123 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Removed explicit body font-family rule, as Tailwind's font-sans class will handle it */
+
+@layer base {
+  :root {
+    --background: 0 0% 0%; /* Black */
+    --foreground: 0 0% 98%; /* Almost White */
+
+    --card: 0 0% 7%; /* Dark Gray */
+    --card-foreground: 0 0% 98%; /* Almost White */
+
+    --popover: 0 0% 10%; /* Darker Gray for Popovers */
+    --popover-foreground: 0 0% 98%; /* Almost White */
+
+    --primary: 211 100% 50%; /* Blue */
+    --primary-foreground: 0 0% 98%; /* Almost White */
+
+    --secondary: 0 0% 15%; /* Dark Gray for secondary elements */
+    --secondary-foreground: 0 0% 98%; /* Almost White */
+
+    --muted: 0 0% 12%; /* Muted Dark Gray */
+    --muted-foreground: 0 0% 60%; /* Lighter Gray for muted text */
+
+    --accent: 165 100% 50%; /* Teal */
+    --accent-foreground: 0 0% 0%; /* Black text on Teal */
+
+    --destructive: 0 84.2% 60.2%; /* Default Destructive Red */
+    --destructive-foreground: 0 0% 98%; /* Almost White */
+
+    --border: 0 0% 20%; /* Dark Gray Border */
+    --input: 0 0% 10%; /* Dark background for input fields */
+    --ring: 165 100% 50%; /* Teal for focus rings */
+
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+
+    /* Sidebar specific theme variables */
+    --sidebar-background: 0 0% 5%; /* Very Dark Gray */
+    --sidebar-foreground: 0 0% 80%; /* Lighter Gray text */
+    --sidebar-primary: 211 100% 50%; /* Blue for active items/buttons */
+    --sidebar-primary-foreground: 0 0% 98%; /* White text on Blue */
+    --sidebar-accent: 165 100% 45%; /* Slightly darker Teal for hover/focus to ensure contrast with black text */
+    --sidebar-accent-foreground: 0 0% 0%; /* Black text on Teal */
+    --sidebar-border: 0 0% 15%; /* Dark Gray border in sidebar */
+    --sidebar-ring: 165 100% 50%; /* Teal for focus rings in sidebar */
+  }
+
+  .dark {
+    /* Keep dark theme variables consistent with root, as app is dark by default */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 165 100% 50%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 10%;
+    --ring: 165 100% 50%;
+    
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 80%;
+    --sidebar-primary: 211 100% 50%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 165 100% 45%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 165 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Apply a subtle transition for background color changes if any */
+    transition-property: background-color, color;
+    transition-duration: 300ms;
+    transition-timing-function: ease-in-out;
+  }
+}
+
+/* Custom scrollbar for a more integrated dark theme look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 0.5rem;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.7);
+  border-radius: 0.5rem;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
